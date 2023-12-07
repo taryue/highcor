@@ -1,0 +1,16 @@
+Package: highcor
+Title: Direct estimation and inference of higher-level correlations
+Version: 1.0.0
+Authors@R: 
+    person("Yue", "Wang", , "yue.2.wang@cuanschutz.edu", role = c("aut", "cre"))
+Description: Direct estimation and inference of higher-level correlations from lower-level measurements. Direct appliations in proteomics and gene-pathway analyses.
+License: GPL-3
+Depends:
+  R (>= 3.6.0)
+Imports:
+  parallel,
+  foreach,
+  Matrix
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
