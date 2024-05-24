@@ -333,6 +333,79 @@ opt_thres <- function(Sigma, A, Z, kappa = 0.1, par1=T, weights=NULL){
 }
 
 
+#' Estimation of the shrinkage estimator based on cross validation
+#'
+#' Given the direct covariance estimator, this function generates the optimal shrinkage which is guaranteed positive definiteness, where kappa is selected by cross validation.
+#'
+#' @param Z An nXq matrix of lower-level measurements; n is the sample size; q is the number of lower-level variables.
+#' @param A A qXp matrix characterizing the binding relationship between higher- and lower-level variables. A should have 0-1 entries.
+#' If the (j,k) entry of A is 1, then the j-th lower-level variable belongs to the k-th higher-level variable.
+#' @param kappa A vector of candidate values of kappa. The default is c(0.1, 0.5, 1, 5, 10, 50, 100).
+#' @param par1 Whether mclapply() is used. The default is TRUE.
+#' @param par2 Whether additional parallel computing is used. The default is FALSE.
+#' @param weights Whether the shrinkage weights are pre-specified. The default is NULL, which means that the weights need to be estimated.
+#' @param num_cores How many cores are used for parallel computing? The default is 8.
+#' @param n.split How many sample splittings will be performed? The default is 50.
+#' @return A list of two objects.
+#'  \itemize{
+#'   \item \code{cv_result}: cross-validation-based F-norm statistics for all kappas.
+#'   \item \code{kappa.min}: the optimal value of kappa from the pool.
+#' }
+#' @export
+#' @examples
+#' \dontrun{
+#' data(toy_lower_dat)
+#' data(toy_binding)
+#' fit.cv <- cv_opt_thres(A=toy_binding, Z=toy_lower_dat, n.split=20)
+#' Sigma_hat <- direct_est(Z=toy_lower_dat, A=toy_binding)$cov.est
+#' fit <- opt_thres(Sigma=Sigma_hat, A=toy_binding, Z=toy_lower_dat, kappa = fit.cv$kappa.min)
+#' }
+
+cv_opt_thres <- function(A, Z, kappa=c(0.1, 1, 5, 10, 50, 100), par1=T, par2=F,  weights=NULL, n.split=50, num_cores=8){
+
+  n <- dim(Z)[1]
+  p <- dim(A)[2]
+  q <- dim(A)[1]
+  n.kappa <- length(kappa)
+  #kappa.cv <- 0
+
+  for(i.split in 1:n.split){
+
+    cal_cv <- function(i.split){
+
+      set.seed(1992 + 719*i.split)
+      idx <- sample.int(n, size=floor(n/2))
+      Z1 <- Z[idx,] ## shrinkage ---
+      Z2 <- Z[-idx,] ## original ---
+
+      Sigma.est.Z1 <- direct_est(Z=Z1, A=A)
+      Sigma.est.Z2 <- direct_est(Z=Z2, A=A)
+
+      fit.shrink.Z1 <- opt_thres(Sigma=Sigma.est.Z1$cov.est, A=A, Z=Z1, kappa = kappa, par1=par1, weights=weights)
+      Sigma.est.Z1.thres <- fit.shrink.Z1$Sigma_opt.list
+
+      kappa.cv <- unlist(lapply(Sigma.est.Z1.thres, function(x){ norm(x - Sigma.est.Z2$cov.est, 'F')  } ))
+
+    }
+
+    ## mclappy does not really help.
+    if(par2 == T) kappa_cv_list <- mclapply(1:n.split, cal_cv, mc.cores=num_cores)
+    if(par2 == F) kappa_cv_list <- lapply(as.list(1:n.split), cal_cv)
+
+    kappa_cv_mat <- do.call("rbind", kappa_cv_list)
+
+    #}
+    cv_result = colMeans(kappa_cv_mat)
+    kappa.est = kappa[which.min(cv_result)]
+
+
+    return( list( cv_result = cv_result,
+                  kappa.min =  kappa.est) )
+
+  }
+}
+
+
 #' Generating p-values for all higher-level correlations
 #'
 #' Given the direct covariance estimator, this function generates p-values for all higher-level correlations.
