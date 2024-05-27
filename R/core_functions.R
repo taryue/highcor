@@ -247,6 +247,7 @@ beta_thres <- function(Sigma, A, Z, trace = T, Vhat = NULL, parallel=T, num_core
 #' If the (j,k) entry of A is 1, then the j-th lower-level variable belongs to the k-th higher-level variable.
 #' @param kappa A positive shrinkage parameter or a vector of shrinkage parameters. The default is 0.1.
 #' @param par1 Whether mclapply() is used. The default is TRUE.
+#' @param num_cores The number of cores for parallel computing.
 #' @param weights Whether the shrinkage weights are pre-specified. The default is NULL, which means that the weights need to be estimated.
 #' @return A list of four objects.
 #'  \itemize{
@@ -263,7 +264,7 @@ beta_thres <- function(Sigma, A, Z, trace = T, Vhat = NULL, parallel=T, num_core
 #' Sigma_hat <- direct_est(Z=toy_lower_dat, A=toy_binding)$cov.est
 #' fit <- opt_thres(Sigma=Sigma_hat, A=toy_binding, Z=toy_lower_dat, kappa = 0.1, par1=FALSE, weights=NULL)
 #' }
-opt_thres <- function(Sigma, A, Z, kappa = 0.1, par1=T, weights=NULL){
+opt_thres <- function(Sigma, A, Z, kappa = 0.1, par1=T, weights=NULL, num_cores=8){
 
   p <- dim(Sigma)[1]
   q <- dim(A)[1]
@@ -273,7 +274,7 @@ opt_thres <- function(Sigma, A, Z, kappa = 0.1, par1=T, weights=NULL){
   #beta2 <- sum(beta_thres(Sigma, A, Z, trace = T))/n
 
   if(is.null(weights)){
-    diag_Theta.list <- beta_thres(Sigma, A, Z, trace = T,parallel=par1)
+    diag_Theta.list <- beta_thres(Sigma, A, Z, trace = T,parallel=par1, num_cores=num_cores)
     diag_Theta <- c(do.call(rbind, diag_Theta.list))
     beta2 <- sum(diag_Theta[ (p+1)*(1:p) - p ])/n
     alpha2 <- norm(Sigma, 'F')^2 - 2*sum(diag(Sigma%*%diag(diag(Sigma))))+ sum(diag(Sigma^2)) + beta2
@@ -381,7 +382,7 @@ cv_opt_thres <- function(A, Z, kappa=c(0.1, 1, 5, 10, 50, 100), par1=T, par2=F, 
       Sigma.est.Z1 <- direct_est(Z=Z1, A=A)
       Sigma.est.Z2 <- direct_est(Z=Z2, A=A)
 
-      fit.shrink.Z1 <- opt_thres(Sigma=Sigma.est.Z1$cov.est, A=A, Z=Z1, kappa = kappa, par1=par1, weights=weights)
+      fit.shrink.Z1 <- opt_thres(Sigma=Sigma.est.Z1$cov.est, A=A, Z=Z1, kappa = kappa, par1=par1, weights=weights, num_cores=num_cores)
       Sigma.est.Z1.thres <- fit.shrink.Z1$Sigma_opt.list
 
       kappa.cv <- unlist(lapply(Sigma.est.Z1.thres, function(x){ norm(x - Sigma.est.Z2$cov.est, 'F')  } ))

@@ -4,7 +4,7 @@
 \alias{opt_thres}
 \title{Estimation of the shrinkage estimator}
 \usage{
-opt_thres(Sigma, A, Z, kappa = 0.1, par1 = T, weights = NULL)
+opt_thres(Sigma, A, Z, kappa = 0.1, par1 = T, weights = NULL, num_cores = 8)
 }
 \arguments{
 \item{Sigma}{The direct covariance estimator from direct_est().}
@@ -19,6 +19,8 @@ If the (j,k) entry of A is 1, then the j-th lower-level variable belongs to the 
 \item{par1}{Whether mclapply() is used. The default is TRUE.}
 
 \item{weights}{Whether the shrinkage weights are pre-specified. The default is NULL, which means that the weights need to be estimated.}
+
+\item{num_cores}{The number of cores for parallel computing.}
 }
 \value{
 A list of four objects.
